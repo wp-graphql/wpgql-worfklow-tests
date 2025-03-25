@@ -30,9 +30,10 @@ on:
 jobs:
   debug-event:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target'
+    # Always run but exit early if workflow_dispatch
     steps:
       - name: Debug Event
+        if: github.event_name == 'pull_request_target'
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Action: ${{ github.event.action }}"
@@ -47,7 +48,7 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ubuntu-latest
-    needs: ${{ github.event_name == 'pull_request_target' && fromJSON('["debug-event"]') || fromJSON('[]') }}
+    needs: debug-event
     if: (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     env:
       REPO_URL: "https://github.com/${{ github.repository }}"
