@@ -224,6 +224,13 @@ jobs:
       - name: Create new Milestone PR
         if: steps.check_pr.outputs.exists == 'false'
         run: |
+          # Get the correct branch ref based on event type
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            HEAD_REF="${{ github.event.inputs.milestone_branch }}"
+          else
+            HEAD_REF="${{ github.event.pull_request.base.ref }}"
+          fi
+
           # Create the PR body with proper formatting
           PR_BODY="## Upcoming Changes"
           PR_BODY="${PR_BODY}"$'\n\n'
@@ -231,19 +238,18 @@ jobs:
           
           # Add @since updates section if there are any
           if [[ "${{ steps.check_since.outputs.has_updates }}" == "true" ]]; then
-            # Read the summary from the previous step's output
             SINCE_SUMMARY='${{ steps.check_since.outputs.summary }}'
             PR_BODY="${PR_BODY}"$'\n\n'
             PR_BODY="${PR_BODY}${SINCE_SUMMARY}"
           fi
           
           PR_BODY="${PR_BODY}"$'\n\n'
-          PR_BODY="${PR_BODY}This PR contains all changes that will be included in the next release (${{ steps.pr_info.outputs.name }}). It is automatically updated when new changesets are added to the ${{ github.event.pull_request.base.ref }} branch."
+          PR_BODY="${PR_BODY}This PR contains all changes that will be included in the next release (${{ steps.pr_info.outputs.name }}). It is automatically updated when new changesets are added to the ${HEAD_REF} branch."
           
           # Use jq to properly escape the content
           PAYLOAD=$(jq -n \
             --arg title "milestone: ${{ steps.pr_info.outputs.name }} 🏁" \
-            --arg head ${{ github.event.pull_request.base.ref }} \
+            --arg head "${HEAD_REF}" \
             --arg base "develop" \
             --arg body "$PR_BODY" \
             '{title: $title, head: $head, base: $base, body: $body}')
