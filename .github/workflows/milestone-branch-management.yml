@@ -97,7 +97,16 @@ jobs:
           
       - name: Generate changeset for current PR
         run: |
-          # Generate a changeset for the current PR
+          # Check if a changeset already exists for this PR
+          EXISTING_CHANGESETS=$(find .changesets -name "*-pr-${{ steps.pr_info.outputs.pr_number }}.md" -type f)
+          
+          if [[ -n "$EXISTING_CHANGESETS" ]]; then
+            echo "Found existing changeset(s) for PR #${{ steps.pr_info.outputs.pr_number }}, updating..."
+            # Remove existing changesets for this PR
+            rm $EXISTING_CHANGESETS
+          fi
+
+          # Generate/regenerate the changeset
           node scripts/generate-changeset.js \
             --pr="${{ steps.pr_info.outputs.pr_number }}" \
             --title="${{ steps.pr_info.outputs.pr_title }}" \
@@ -111,9 +120,9 @@ jobs:
           # Check if there are changes to commit
           if [[ -n "$(git status --porcelain)" ]]; then
             git add .changesets/
-            git commit -m "chore: add changeset for PR #${{ steps.pr_info.outputs.pr_number }}"
+            git commit -m "chore: update changeset for PR #${{ steps.pr_info.outputs.pr_number }}"
             git push
-            echo "Changeset created and pushed for PR #${{ steps.pr_info.outputs.pr_number }}"
+            echo "Changeset updated and pushed for PR #${{ steps.pr_info.outputs.pr_number }}"
           else
             echo "No changes to commit"
           fi
