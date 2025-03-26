@@ -30,9 +30,10 @@ on:
 jobs:
   debug-event:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target'
+    # Always run but exit early if workflow_dispatch
     steps:
       - name: Debug Event
+        if: github.event_name == 'pull_request_target'
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Action: ${{ github.event.action }}"
@@ -47,7 +48,7 @@ jobs:
       contents: write
       pull-requests: write
     runs-on: ubuntu-latest
-    needs: [debug-event]
+    needs: debug-event
     if: (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     env:
       REPO_URL: "https://github.com/${{ github.repository }}"
@@ -96,7 +97,16 @@ jobs:
           
       - name: Generate changeset for current PR
         run: |
-          # Generate a changeset for the current PR
+          # Check if a changeset already exists for this PR
+          EXISTING_CHANGESETS=$(find .changesets -name "*-pr-${{ steps.pr_info.outputs.pr_number }}.md" -type f)
+          
+          if [[ -n "$EXISTING_CHANGESETS" ]]; then
+            echo "Found existing changeset(s) for PR #${{ steps.pr_info.outputs.pr_number }}, updating..."
+            # Remove existing changesets for this PR
+            rm $EXISTING_CHANGESETS
+          fi
+
+          # Generate/regenerate the changeset
           node scripts/generate-changeset.js \
             --pr="${{ steps.pr_info.outputs.pr_number }}" \
             --title="${{ steps.pr_info.outputs.pr_title }}" \
@@ -110,9 +120,9 @@ jobs:
           # Check if there are changes to commit
           if [[ -n "$(git status --porcelain)" ]]; then
             git add .changesets/
-            git commit -m "chore: add changeset for PR #${{ steps.pr_info.outputs.pr_number }}"
+            git commit -m "chore: update changeset for PR #${{ steps.pr_info.outputs.pr_number }}"
             git push
-            echo "Changeset created and pushed for PR #${{ steps.pr_info.outputs.pr_number }}"
+            echo "Changeset updated and pushed for PR #${{ steps.pr_info.outputs.pr_number }}"
           else
             echo "No changes to commit"
           fi
@@ -223,6 +233,13 @@ jobs:
       - name: Create new Milestone PR
         if: steps.check_pr.outputs.exists == 'false'
         run: |
+          # Get the correct branch ref based on event type
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            HEAD_REF="${{ github.event.inputs.milestone_branch }}"
+          else
+            HEAD_REF="${{ github.event.pull_request.base.ref }}"
+          fi
+
           # Create the PR body with proper formatting
           PR_BODY="## Upcoming Changes"
           PR_BODY="${PR_BODY}"$'\n\n'
@@ -230,19 +247,18 @@ jobs:
           
           # Add @since updates section if there are any
           if [[ "${{ steps.check_since.outputs.has_updates }}" == "true" ]]; then
-            # Read the summary from the previous step's output
             SINCE_SUMMARY='${{ steps.check_since.outputs.summary }}'
             PR_BODY="${PR_BODY}"$'\n\n'
             PR_BODY="${PR_BODY}${SINCE_SUMMARY}"
           fi
           
           PR_BODY="${PR_BODY}"$'\n\n'
-          PR_BODY="${PR_BODY}This PR contains all changes that will be included in the next release (${{ steps.pr_info.outputs.name }}). It is automatically updated when new changesets are added to the ${{ github.event.pull_request.base.ref }} branch."
+          PR_BODY="${PR_BODY}This PR contains all changes that will be included in the next release (${{ steps.pr_info.outputs.name }}). It is automatically updated when new changesets are added to the ${HEAD_REF} branch."
           
           # Use jq to properly escape the content
           PAYLOAD=$(jq -n \
             --arg title "milestone: ${{ steps.pr_info.outputs.name }} 🏁" \
-            --arg head ${{ github.event.pull_request.base.ref }} \
+            --arg head "${HEAD_REF}" \
             --arg base "develop" \
             --arg body "$PR_BODY" \
             '{title: $title, head: $head, base: $base, body: $body}')
