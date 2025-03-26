@@ -19,40 +19,23 @@ The workflow is triggered by:
 ## Implementation
 
 This workflow works in conjunction with the Changeset Generation workflow but specifically handles:
-- Milestone branch changesets
+- Milestone branch changesets with milestone metadata
 - Release PR management from milestone branches to develop
-- Release notes generation for milestone changes
+- Release notes generation with milestone grouping
+- Changeset updates when PRs move between milestones
 
-## Workflow Jobs
+## Changeset Management
 
-### 1. Debug Event (debug-event)
-- Runs for pull_request_target events
-- Logs important event details for debugging:
-  - Event name
-  - Action
-  - PR merged status
-  - Base and head refs
-  - PR number and title
+### Milestone Detection
+- Automatically detects milestone name from branch reference (e.g., `milestone/feature-x` → `feature-x`)
+- Includes milestone information in changeset metadata
+- Updates existing changesets when PRs move between milestones
 
-### 2. Generate Changeset (generate-changeset)
-Runs when:
-- A PR is merged to a milestone branch
-- Manually triggered via workflow_dispatch
-
-This job:
-1. Checks out the milestone branch
-2. Sets up Node.js
-3. Installs dependencies
-4. Extracts PR information
-5. Manages changesets:
-   - Checks for existing changesets
-   - Removes duplicates if found
-   - Generates updated changeset
-6. Generates release notes
-7. Checks for @since tag updates
-8. Manages the release PR:
-   - Updates existing PR if found
-   - Creates new PR if needed
+### Release Notes Organization
+- Groups changes by milestone
+- Provides a milestone summary section
+- Maintains standard categorization (breaking changes, features, fixes)
+- Lists completed milestones with links to their PRs
 
 ## Release PR Format
 
@@ -63,10 +46,20 @@ The release PR follows this format:
   ```md
   ## Upcoming Changes
 
-  {Generated changelog from changesets}
+  ### 🎯 Completed Milestones
+  - **milestone-name** (#PR)
 
-  ### 🔄 Pending @since Tag Updates (if any)
-  {List of files needing version updates}
+  ### ✨ New Features
+  - Feature description (#PR)
+
+  ### 🐛 Bug Fixes
+  - Fix description (#PR)
+
+  ### 🔄 Other Changes
+  - Other changes (#PR)
+
+  ### 👏 Contributors
+  [List of contributors]
 
   This PR contains all changes that will be included in the next release ({milestone-name}).
   It is automatically updated when new changesets are added to the milestone/* branch.

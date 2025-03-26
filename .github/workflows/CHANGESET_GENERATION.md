@@ -29,6 +29,8 @@ title: "Brief description of the change"
 pr: 123
 author: "username"
 type: "feat|fix|chore|docs|refactor|test|style|perf"
+milestone: "milestone-name" # Optional, included when PR is merged to a milestone branch
+breaking: false # Optional, defaults to false
 ---
 
 Detailed description of the change...
@@ -40,6 +42,26 @@ Detailed description of the change...
 - **pr**: The pull request number
 - **author**: The GitHub username of the PR author
 - **type**: The type of change, following conventional commit types
+- **milestone**: (Optional) The milestone name if the PR was merged to a milestone branch
+- **breaking**: (Optional) Whether the change is breaking, automatically detected from commit messages
+
+## Release Notes Format
+
+The generated release notes include:
+
+### 1. Milestone Information (if applicable)
+- Lists completed milestones and their associated PRs
+- Groups changes by milestone for better organization
+
+### 2. Change Categories
+- Breaking Changes (if any)
+- New Features
+- Bug Fixes
+- Other Changes
+
+### 3. Contributors
+- List of all contributors
+- Special recognition for first-time contributors
 
 ## Workflow Jobs
 
