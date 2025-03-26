@@ -29,6 +29,7 @@ const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const { getEnvVar } = require('./utils/env');
 const chalk = require('chalk');
+const yaml = require('yaml');
 
 // Get GitHub token from environment variables
 // This will work with both GitHub Actions (GITHUB_TOKEN) and local .env file
@@ -60,6 +61,11 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     description: 'Whether the PR indicates a breaking change',
     default: false
+  })
+  .option('branchRef', {
+    type: 'string',
+    description: 'Branch reference',
+    default: process.env.GITHUB_REF_NAME
   })
   .help()
   .argv;
@@ -109,6 +115,19 @@ function isBreakingChange(title, body) {
 }
 
 /**
+ * Get milestone name from branch reference
+ * 
+ * @param {string} branchRef Branch reference
+ * @returns {string|null} Milestone name or null if no milestone
+ */
+const getMilestoneName = (branchRef) => {
+  if (branchRef && branchRef.startsWith('milestone/')) {
+    return branchRef.replace('milestone/', '');
+  }
+  return null;
+};
+
+/**
  * Generate a changeset file
  */
 async function generateChangeset() {
@@ -117,25 +136,29 @@ async function generateChangeset() {
   await fs.ensureDir(changesetDir);
 
   // Extract PR information
-  const { pr, title, author, body } = argv;
+  const { pr, title, author, body, branchRef } = argv;
   const changeType = extractChangeType(title);
   const breaking = isBreakingChange(title, body);
+  const milestone = getMilestoneName(branchRef);
+
+  const changesetData = {
+    title,
+    pr,
+    author,
+    type: changeType,
+    breaking,
+    ...(milestone && { milestone }),
+  };
+
+  const content = `---
+${yaml.dump(changesetData)}---
+
+${body || title}
+`;
 
   // Generate unique filename with timestamp and PR number
-  const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '').split('T')[0];
   const filename = path.join(changesetDir, `${timestamp}-pr-${pr}.md`);
-
-  // Create changeset content
-  const content = `---
-title: "${title}"
-pr: ${pr}
-author: "${author}"
-type: "${changeType}"
-breaking: ${breaking}
-description: |
-${body.split('\n').map(line => `  ${line}`).join('\n')}
----
-`;
 
   // Write changeset file
   await fs.writeFile(filename, content);

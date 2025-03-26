@@ -430,6 +430,24 @@ function categorizeChangesets(changesets) {
 }
 
 /**
+ * Add milestone grouping function
+ * 
+ * @param {Array} changesets Array of changeset objects
+ * @returns {Object} Object with changesets grouped by milestone
+ */
+const groupByMilestone = (changesets) => {
+  return changesets.reduce((acc, changeset) => {
+    if (changeset.milestone) {
+      if (!acc[changeset.milestone]) {
+        acc[changeset.milestone] = [];
+      }
+      acc[changeset.milestone].push(changeset);
+    }
+    return acc;
+  }, {});
+};
+
+/**
  * Generate markdown release notes
  * 
  * @param {Object} categories Categorized changesets
@@ -446,6 +464,20 @@ function generateMarkdownReleaseNotes(categories, contributorInfo) {
   
   let markdown = '## Changelog\n\n';
   markdown += `**Bump Type:** ${bumpType}\n\n`;
+  
+  // Add Milestones section
+  const milestoneGroups = groupByMilestone(breakingChanges);
+  if (Object.keys(milestoneGroups).length > 0) {
+    markdown += '### 🎯 Completed Milestones\n';
+    Object.keys(milestoneGroups)
+      .sort()
+      .forEach(milestone => {
+        const prs = milestoneGroups[milestone];
+        // Link to the milestone PR that was merged
+        markdown += `- **${milestone}** (#${prs[0].pr})\n`;
+      });
+    markdown += '\n';
+  }
   
   if (breakingChanges.length > 0) {
     markdown += '### ⚠️ BREAKING CHANGES\n';
