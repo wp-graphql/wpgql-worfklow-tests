@@ -48,14 +48,14 @@ jobs:
     if: (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     env:
       REPO_URL: "https://github.com/${{ github.repository }}"
-      GITHUB_TOKEN: ${{ secrets.PAT }}
+      GITHUB_TOKEN: ${{ secrets.REPO_PAT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && 'develop' || github.event.pull_request.base.ref }}
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.REPO_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -80,7 +80,7 @@ jobs:
           fi
 
           # Fetch PR data
-          PR_DATA=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.PAT }}" \
+          PR_DATA=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}")
 
           # Validate the API response
