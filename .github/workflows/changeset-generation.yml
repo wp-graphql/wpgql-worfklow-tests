@@ -189,10 +189,20 @@ jobs:
       - name: Check for existing release PR
         id: check_pr
         run: |
+          # Debug info
+          echo "Checking for PRs from develop to master..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Owner: ${{ github.repository_owner }}"
+          
           # Check if there's already a PR from develop to master
-          PR_LIST=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.REPO_PAT }}" \
+          PR_LIST=$(curl -s --max-time 30 \
+            -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:develop&base=master")
+          
+          # Debug the response
+          echo "API Response:"
+          echo "$PR_LIST" | jq '.'
           
           # Add error handling for API response
           if [[ $(echo "$PR_LIST" | jq -r 'if type=="array" then "valid" else "invalid" end') != "valid" ]]; then
@@ -202,12 +212,15 @@ jobs:
           fi
 
           PR_COUNT=$(echo "$PR_LIST" | jq length)
+          echo "Found $PR_COUNT matching PRs"
           
           if [[ "$PR_COUNT" -gt 0 ]]; then
             PR_NUMBER=$(echo "$PR_LIST" | jq -r '.[0].number')
+            echo "Found existing PR #${PR_NUMBER}"
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "number=${PR_NUMBER}" >> $GITHUB_OUTPUT
           else
+            echo "No existing PR found"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
