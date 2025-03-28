@@ -102,9 +102,11 @@ jobs:
           
           if [[ -n "$EXISTING_CHANGESETS" ]]; then
             echo "Found existing changeset(s) for PR #${{ steps.pr_info.outputs.pr_number }}, updating..."
-            # Remove existing changesets for this PR
             rm $EXISTING_CHANGESETS
           fi
+
+          # Set the branch ref for milestone detection
+          export GITHUB_REF_NAME=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.milestone_branch || github.event.pull_request.base.ref }}
 
           # Generate/regenerate the changeset
           node scripts/generate-changeset.js \
