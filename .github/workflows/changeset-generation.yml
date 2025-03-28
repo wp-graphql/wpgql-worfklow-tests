@@ -123,16 +123,18 @@ jobs:
           
           if [[ -n "$EXISTING_CHANGESETS" ]]; then
             echo "Found existing changeset(s) for PR #${{ steps.pr_info.outputs.pr_number }}, updating..."
-            # Remove existing changesets for this PR
             rm $EXISTING_CHANGESETS
           fi
+
+          # Write PR body to a temporary file to avoid shell interpretation issues
+          echo '${{ steps.pr_info.outputs.pr_body }}' > /tmp/pr_body.txt
 
           # Generate/regenerate the changeset
           node scripts/generate-changeset.js \
             --pr="${{ steps.pr_info.outputs.pr_number }}" \
             --title="${{ steps.pr_info.outputs.pr_title }}" \
             --author="${{ steps.pr_info.outputs.pr_author }}" \
-            --body="${{ steps.pr_info.outputs.pr_body }}"
+            --body="$(cat /tmp/pr_body.txt)"
 
           # Commit and push the changeset
           git config --global user.name "GitHub Actions"
