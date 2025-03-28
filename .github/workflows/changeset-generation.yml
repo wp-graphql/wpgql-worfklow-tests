@@ -114,7 +114,7 @@ jobs:
 
         shell: /usr/bin/bash -e {0}
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.REPO_PAT }}
 
       - name: Generate changeset for current PR
         run: |
@@ -188,12 +188,19 @@ jobs:
         id: check_pr
         run: |
           # Check if there's already a PR from develop to master
-          PR_LIST=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.PAT }}" \
+          PR_LIST=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:develop&base=master")
+          
+          # Add error handling for API response
+          if [[ $(echo "$PR_LIST" | jq -r 'if type=="array" then "valid" else "invalid" end') != "valid" ]]; then
+            echo "Error: Invalid response from GitHub API"
+            echo "Response: $PR_LIST"
+            exit 1
+          fi
 
           PR_COUNT=$(echo "$PR_LIST" | jq length)
-
+          
           if [[ "$PR_COUNT" -gt 0 ]]; then
             PR_NUMBER=$(echo "$PR_LIST" | jq -r '.[0].number')
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -209,7 +216,7 @@ jobs:
           PR_NUMBER="${{ steps.check_pr.outputs.number }}"
 
           # Get current PR data
-          PR_DATA=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.PAT }}" \
+          PR_DATA=$(curl -s --max-time 30 -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}")
 
           PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
@@ -239,7 +246,7 @@ jobs:
 
           # Update the PR
           RESPONSE=$(curl -X PATCH \
-            -H "Authorization: token ${{ secrets.PAT }}" \
+            -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}" \
@@ -284,7 +291,7 @@ jobs:
 
           # Create a new PR from develop to master
           RESPONSE=$(curl -X POST \
-            -H "Authorization: token ${{ secrets.PAT }}" \
+            -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository }}/pulls" \
