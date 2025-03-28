@@ -195,10 +195,11 @@ jobs:
           echo "Owner: ${{ github.repository_owner }}"
           
           # Check if there's already a PR from develop to master
+          # Note: Removed the owner prefix from head as it's already in the repo context
           PR_LIST=$(curl -s --max-time 30 \
             -H "Authorization: token ${{ secrets.REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&head=${{ github.repository_owner }}:develop&base=master")
+            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&head=develop&base=master")
           
           # Debug the response
           echo "API Response:"
