@@ -29,7 +29,7 @@ const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const { getEnvVar } = require('./utils/env');
 const chalk = require('chalk');
-const yaml = require('yaml');
+const yaml = require('js-yaml');
 
 // Get GitHub token from environment variables
 // This will work with both GitHub Actions (GITHUB_TOKEN) and local .env file
@@ -130,13 +130,18 @@ const getMilestoneName = (branchRef) => {
 /**
  * Generate a changeset file
  */
-async function generateChangeset() {
+const generateChangeset = async ({
+  pr,
+  title,
+  author,
+  body,
+  branchRef
+}) => {
   // Create .changesets directory if it doesn't exist
   const changesetDir = path.join(process.cwd(), '.changesets');
   await fs.ensureDir(changesetDir);
 
   // Extract PR information
-  const { pr, title, author, body, branchRef } = argv;
   const changeType = extractChangeType(title);
   const breaking = isBreakingChange(title, body);
   const milestone = getMilestoneName(branchRef);
@@ -151,7 +156,7 @@ async function generateChangeset() {
   };
 
   const content = `---
-${yaml.dump(changesetData)}---
+${yaml.dump(changesetData, { quotingType: '"' })}---
 
 ${body || title}
 `;
@@ -161,12 +166,13 @@ ${body || title}
   const filename = path.join(changesetDir, `${timestamp}-pr-${pr}.md`);
 
   // Write changeset file
-  await fs.writeFile(filename, content);
+  await fs.promises.writeFile(filename, content, 'utf8');
   console.log(`Changeset created: ${filename}`);
-}
+  return filename;
+};
 
 // Run the script
-generateChangeset().catch(err => {
+generateChangeset(argv).catch(err => {
   console.error('Error generating changeset:', err);
   process.exit(1);
 }); 
