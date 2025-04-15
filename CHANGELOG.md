@@ -1,12 +1,10 @@
 # Changelog
 
-## v2.1.2 - 2025-04-01
+## v2.1.2 - 2025-04-15
 
 ### Other Changes
 
 - chore: update content type descriptions ([#18](https://github.com/jasonbahl/automation-tests/pull/18))
-
-
 
 ## v2.1.1 - 2025-03-19
 
